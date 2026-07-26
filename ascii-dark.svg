@@ -15,11 +15,11 @@
 <stop offset=".5" stop-color="#22D3EE" stop-opacity=".07"/>
 <stop offset="1" stop-color="#fff" stop-opacity="0"/>
 </linearGradient>
-<linearGradient id="wipe" gradientUnits="userSpaceOnUse" x1="0" y1="-262.5" x2="153.8" y2="0" spreadMethod="pad">
+<linearGradient id="wipe" gradientUnits="userSpaceOnUse" x1="0" y1="-262.5" x2="153.8" y2="0" spreadMethod="pad" gradientTransform="translate(0,1363.0)">
 <stop offset="0" stop-color="#fff"/>
 <stop offset=".5" stop-color="#fff"/>
 <stop offset="1" stop-color="#000"/>
-<animateTransform attributeName="gradientTransform" type="translate" values="0 0; 0 953.3" dur="3.8s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".42 0 .35 1"/>
+<animateTransform attributeName="gradientTransform" type="translate" values="0 0; 0 1363.0" dur="3.8s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines=".42 0 .35 1"/>
 </linearGradient>
 <filter id="wob" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
 <feTurbulence type="fractalNoise" baseFrequency="0.005 0.009" numOctaves="2" seed="11" result="n">
@@ -29,6 +29,8 @@
 </filter>
 <mask id="reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="699.2" height="690.8">
 <rect x="-280" y="-276" width="1259" height="1243" fill="url(#wipe)" filter="url(#wob)"/>
+<rect x="0" y="0" width="699.2" height="690.8" fill="#fff" opacity="1">
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;.82;1" dur="4.3s" fill="freeze"/></rect>
 </mask>
 </defs>
 <rect width="699.2" height="690.8" rx="14" fill="#030712"/>

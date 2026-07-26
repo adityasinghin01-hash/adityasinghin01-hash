@@ -31,6 +31,11 @@ def build(lines, theme, sweep=3.8):
     w = round(cols * ADV + PAD * 2, 1)
     h = round(rows * LH + PAD * 2, 1)
     band = round(h * 0.38, 1)          # soft edge depth of the waterline
+    skew = round(w * 0.22, 1)          # diagonal lean of the waterline
+    # Distance the gradient must travel for every canvas pixel to clear the
+    # black stop. Straight h+band leaves the bottom-right corner masked,
+    # because the gradient vector is diagonal, not vertical.
+    throw = round(h + band + w * skew / band, 1)
     total = round(sweep + 0.3, 2)
 
     out = [
@@ -65,7 +70,10 @@ def build(lines, theme, sweep=3.8):
         # face like a waterline and neighbouring characters resolve at
         # genuinely different moments.
         f'<linearGradient id="wipe" gradientUnits="userSpaceOnUse" '
-        f'x1="0" y1="{-band}" x2="{round(w*0.22,1)}" y2="0" spreadMethod="pad">',
+        f'x1="0" y1="{-band}" x2="{skew}" y2="0" spreadMethod="pad" '
+        # Base value is the END of the sweep, so a renderer that ignores
+        # SMIL shows the finished portrait instead of an empty panel.
+        f'gradientTransform="translate(0,{throw})">',
         '<stop offset="0" stop-color="#fff"/>',
         '<stop offset=".5" stop-color="#fff"/>',
         '<stop offset="1" stop-color="#000"/>',
@@ -74,7 +82,7 @@ def build(lines, theme, sweep=3.8):
         # translating the rect carries the whole mask off-canvas and the
         # portrait disappears instead of resolving.
         '<animateTransform attributeName="gradientTransform" type="translate" '
-        f'values="0 0; 0 {round(h + band, 1)}" dur="{sweep}s" fill="freeze" '
+        f'values="0 0; 0 {throw}" dur="{sweep}s" fill="freeze" '
         'calcMode="spline" keyTimes="0;1" keySplines=".42 0 .35 1"/>',
         "</linearGradient>",
         '<filter id="wob" x="-40%" y="-40%" width="180%" height="180%" '
@@ -94,6 +102,12 @@ def build(lines, theme, sweep=3.8):
         # oversized so the displacement never drags emptiness into frame
         f'<rect x="{-w*0.4:.0f}" y="{-h*0.4:.0f}" width="{w*1.8:.0f}" '
         f'height="{h*1.8:.0f}" fill="url(#wipe)" filter="url(#wob)"/>',
+        # Plain backstop: carries the final state so the portrait never
+        # depends on the filter, and is what a renderer that skips SMIL
+        # falls back to.
+        f'<rect x="0" y="0" width="{w}" height="{h}" fill="#fff" opacity="1">',
+        f'<animate attributeName="opacity" values="0;0;1" keyTimes="0;.82;1" '
+        f'dur="{round(sweep + 0.5, 2)}s" fill="freeze"/></rect>',
         "</mask>",
         "</defs>",
         f'<rect width="{w}" height="{h}" rx="14" fill="{t["bg"]}"/>',

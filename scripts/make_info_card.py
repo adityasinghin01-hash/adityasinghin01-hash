@@ -21,7 +21,7 @@ def build(theme):
         """parts = [(text, colour, bold)] laid out left to right."""
         nonlocal y, i
         x = PAD + indent
-        row = [f'<g opacity="0"><animate attributeName="opacity" from="0" to="1" '
+        row = [f'<g opacity="1"><animate attributeName="opacity" from="0" to="1" '
                f'begin="{0.18 + i * 0.05:.3f}s" dur=".7s" fill="freeze" '
                f'calcMode="spline" keyTimes="0;1" keySplines=".25 .1 .25 1"/>']
         for text, col, bold in parts:

@@ -55,7 +55,7 @@ def build(data, theme):
             delay = 0.25 + (wk + dow) * 0.010                # diagonal wipe
             cells.append(
                 f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" rx="{R}" '
-                f'fill="{scale[lv]}" opacity="0">'
+                f'fill="{scale[lv]}" opacity="1">'
                 f'<title>{days[key]} on {key}</title>'
                 f'<animate attributeName="opacity" from="0" to="1" '
                 f'begin="{delay:.2f}s" dur=".9s" fill="freeze" '
@@ -96,7 +96,7 @@ def build(data, theme):
         f'fill="none" stroke="url(#edge)" stroke-width="1.5"/>',
         f'<g font-family="{MONO}">',
         *labels, *cells, *legend,
-        f'<text x="{PAD_L}" y="{h-PAD_B+34}" fill="{fg}" font-size="11" opacity="0">{stats}'
+        f'<text x="{PAD_L}" y="{h-PAD_B+34}" fill="{fg}" font-size="11" opacity="1">{stats}'
         f'<animate attributeName="opacity" from="0" to="1" begin="1.5s" dur=".6s" fill="freeze"/>'
         "</text>",
         "</g></svg>",
