@@ -20,19 +20,28 @@ def fetch():
 
 
 def parse(html):
-    """Pull (date, count) out of the calendar cells. GitHub has moved this
-    between `data-count` and the tooltip text before, so accept either."""
-    days = {}
-    for cell in re.findall(r"<td[^>]*data-date=[^>]*>", html):
-        d = re.search(r'data-date="(\d{4}-\d{2}-\d{2})"', cell)
-        if not d:
+    """Pull (date, count) out of the calendar.
+
+    GitHub dropped `data-count` from the <td>s — only `data-level` (0-4) is
+    left there, and using that as a count undercounts badly (545 -> 85). The
+    real numbers now live in the <tool-tip> text keyed to each cell's id.
+    """
+    ids = dict(re.findall(
+        r'<td[^>]*data-date="(\d{4}-\d{2}-\d{2})"[^>]*id="([^"]+)"', html))
+    if not ids:                                   # attribute order flipped
+        ids = {d: i for i, d in re.findall(
+            r'<td[^>]*id="([^"]+)"[^>]*data-date="(\d{4}-\d{2}-\d{2})"', html)}
+    by_id = {v: k for k, v in ids.items()}
+
+    days = {d: 0 for d in ids}
+    for tip_for, text in re.findall(
+            r'<tool-tip[^>]*for="([^"]+)"[^>]*>([^<]*)</tool-tip>', html):
+        d = by_id.get(tip_for)
+        if d is None:
             continue
-        c = re.search(r'data-count="(\d+)"', cell)
-        if c:
-            days[d.group(1)] = int(c.group(1))
-        else:
-            lvl = re.search(r'data-level="(\d+)"', cell)
-            days[d.group(1)] = int(lvl.group(1)) if lvl else 0
+        m = re.match(r"\s*(No|[\d,]+)\s+contribution", text)
+        if m:
+            days[d] = 0 if m.group(1) == "No" else int(m.group(1).replace(",", ""))
     return days
 
 
