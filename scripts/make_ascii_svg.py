@@ -25,12 +25,13 @@ THEMES = {
 }
 
 
-def build(lines, theme, reveal=0.030, dur=0.26):
+def build(lines, theme, sweep=3.8):
     t = THEMES[theme]
     cols, rows = len(lines[0]), len(lines)
     w = round(cols * ADV + PAD * 2, 1)
     h = round(rows * LH + PAD * 2, 1)
-    total = round(rows * reveal + dur, 2)
+    band = round(h * 0.38, 1)          # soft edge depth of the waterline
+    total = round(sweep + 0.3, 2)
 
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" '
@@ -55,6 +56,45 @@ def build(lines, theme, reveal=0.030, dur=0.26):
         f'<stop offset=".5" stop-color="{t["g2"]}" stop-opacity="{t["scan"]}"/>',
         '<stop offset="1" stop-color="#fff" stop-opacity="0"/>',
         "</linearGradient>",
+
+        # --- the reveal -------------------------------------------------
+        # A per-row opacity fade reads as stepped no matter how you ease it,
+        # because every glyph in a row flips on the same clock. Instead the
+        # portrait is unmasked by a soft diagonal gradient whose edge is
+        # displaced by animated turbulence, so the boundary ripples across the
+        # face like a waterline and neighbouring characters resolve at
+        # genuinely different moments.
+        f'<linearGradient id="wipe" gradientUnits="userSpaceOnUse" '
+        f'x1="0" y1="{-band}" x2="{round(w*0.22,1)}" y2="0" spreadMethod="pad">',
+        '<stop offset="0" stop-color="#fff"/>',
+        '<stop offset=".5" stop-color="#fff"/>',
+        '<stop offset="1" stop-color="#000"/>',
+        # Drive the sweep from gradientTransform, never from a transform on the
+        # rect: a userSpaceOnUse gradient rides along with its element, so
+        # translating the rect carries the whole mask off-canvas and the
+        # portrait disappears instead of resolving.
+        '<animateTransform attributeName="gradientTransform" type="translate" '
+        f'values="0 0; 0 {round(h + band, 1)}" dur="{sweep}s" fill="freeze" '
+        'calcMode="spline" keyTimes="0;1" keySplines=".42 0 .35 1"/>',
+        "</linearGradient>",
+        '<filter id="wob" x="-40%" y="-40%" width="180%" height="180%" '
+        'color-interpolation-filters="sRGB">',
+        '<feTurbulence type="fractalNoise" baseFrequency="0.005 0.009" '
+        'numOctaves="2" seed="11" result="n">',
+        '<animate attributeName="baseFrequency" '
+        'values="0.005 0.009;0.009 0.006;0.006 0.011;0.005 0.009" dur="7s" '
+        'repeatCount="indefinite" calcMode="spline" keyTimes="0;.33;.66;1" '
+        'keySplines=".4 0 .6 1;.4 0 .6 1;.4 0 .6 1"/>',
+        "</feTurbulence>",
+        '<feDisplacementMap in="SourceGraphic" in2="n" scale="72" '
+        'xChannelSelector="R" yChannelSelector="G"/>',
+        "</filter>",
+        '<mask id="reveal" maskUnits="userSpaceOnUse" '
+        f'x="0" y="0" width="{w}" height="{h}">',
+        # oversized so the displacement never drags emptiness into frame
+        f'<rect x="{-w*0.4:.0f}" y="{-h*0.4:.0f}" width="{w*1.8:.0f}" '
+        f'height="{h*1.8:.0f}" fill="url(#wipe)" filter="url(#wob)"/>',
+        "</mask>",
         "</defs>",
         f'<rect width="{w}" height="{h}" rx="14" fill="{t["bg"]}"/>',
         f'<rect x=".5" y=".5" width="{w-1}" height="{h-1}" rx="13.5" fill="none" stroke="{t["stroke"]}"/>',
@@ -62,19 +102,15 @@ def build(lines, theme, reveal=0.030, dur=0.26):
         '<g><animateTransform attributeName="transform" type="translate" '
         'values="0 0; 0 -3.5; 0 0" dur="7s" repeatCount="indefinite" '
         'calcMode="spline" keyTimes="0;.5;1" keySplines=".4 0 .6 1;.4 0 .6 1"/>',
-        f'<g font-family="{MONO}" font-size="{FS}" fill="url(#g)" '
-        f'filter="url(#bloom)" opacity="{t["glow"]}" xml:space="preserve">',
+        '<g mask="url(#reveal)">',
     ]
 
-    # base pass (blurred, low opacity) then crisp pass on top
-    for layer, (op, filt) in enumerate([(t["glow"], True), ("1", False)]):
-        if layer == 1:
-            out.append("</g>")
-            out.append(f'<g font-family="{MONO}" font-size="{FS}" fill="url(#g)" '
-                       f'xml:space="preserve">')
+    # blurred bloom pass, then the crisp pass on top of it
+    for layer in (0, 1):
+        bloom = (f' filter="url(#bloom)" opacity="{t["glow"]}"' if layer == 0 else "")
+        out.append(f'<g font-family="{MONO}" font-size="{FS}" fill="url(#g)"{bloom}>')
         for i, ln in enumerate(lines):
             y = round(PAD + (i + 0.82) * LH, 1)
-            begin = round(i * reveal, 3)
             # xml:space has to sit on the <text> itself — Chrome ignores it when
             # it is only inherited from the parent <g>, the leading/trailing
             # spaces collapse, and textLength then smears the surviving glyphs
@@ -82,9 +118,8 @@ def build(lines, theme, reveal=0.030, dur=0.26):
             out.append(
                 f'<text xml:space="preserve" x="{PAD}" y="{y}" '
                 f'textLength="{round(cols*ADV,1)}" '
-                f'lengthAdjust="spacing" opacity="0">{escape(ln)}'
-                f'<animate attributeName="opacity" from="0" to="1" begin="{begin}s" '
-                f'dur="{dur}s" fill="freeze"/></text>')
+                f'lengthAdjust="spacing">{escape(ln)}</text>')
+        out.append("</g>")
     out.append("</g>")
 
     # scanline sweep, starts once the portrait has resolved

@@ -52,13 +52,15 @@ def build(data, theme):
             x = PAD_L + wk * (CELL + GAP)
             y = PAD_T + dow * (CELL + GAP)
             lv = level(days[key], peak)
-            delay = 0.25 + (wk + dow) * 0.012                # diagonal wipe
+            delay = 0.25 + (wk + dow) * 0.010                # diagonal wipe
             cells.append(
                 f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" rx="{R}" '
                 f'fill="{scale[lv]}" opacity="0">'
                 f'<title>{days[key]} on {key}</title>'
                 f'<animate attributeName="opacity" from="0" to="1" '
-                f'begin="{delay:.2f}s" dur=".45s" fill="freeze"/></rect>')
+                f'begin="{delay:.2f}s" dur=".9s" fill="freeze" '
+                f'calcMode="spline" keyTimes="0;1" keySplines=".25 .1 .25 1"/>'
+                f'</rect>')
             if d.day <= 7 and d.month not in seen:
                 seen.add(d.month)
                 labels.append(f'<text x="{x}" y="{PAD_T-10}" fill="{mute}" '

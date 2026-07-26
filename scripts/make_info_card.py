@@ -22,7 +22,8 @@ def build(theme):
         nonlocal y, i
         x = PAD + indent
         row = [f'<g opacity="0"><animate attributeName="opacity" from="0" to="1" '
-               f'begin="{0.18 + i * 0.055:.3f}s" dur=".34s" fill="freeze"/>']
+               f'begin="{0.18 + i * 0.05:.3f}s" dur=".7s" fill="freeze" '
+               f'calcMode="spline" keyTimes="0;1" keySplines=".25 .1 .25 1"/>']
         for text, col, bold in parts:
             wgt = ' font-weight="600"' if bold else ""
             row.append(f'<text xml:space="preserve" x="{x:.0f}" y="{y:.0f}" fill="{col}"{wgt}>'
