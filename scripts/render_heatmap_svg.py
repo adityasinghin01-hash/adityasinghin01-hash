@@ -3,7 +3,7 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
-from make_ascii_svg import THEMES, MONO
+from theme import THEMES, MONO
 
 ROOT = Path(__file__).resolve().parent.parent
 CELL, GAP, R = 11, 3, 2.5

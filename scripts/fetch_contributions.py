@@ -67,6 +67,13 @@ if __name__ == "__main__":
     days = parse(fetch())
     if not days:
         sys.exit("no contribution cells found — GitHub markup may have changed")
+    # Fail loudly rather than committing a blank year. GitHub has already moved
+    # these counts once (data-count -> tool-tip text); if they move again the
+    # cells still parse but every value reads zero, and a silent regression
+    # would overwrite a good graph with an empty one.
+    if sum(days.values()) == 0:
+        sys.exit(f"parsed {len(days)} cells but every count is zero — "
+                 "the counts have probably moved again in GitHub's markup")
     cur, best = streaks(days)
     total = sum(days.values())
     peak = max(days, key=days.get)

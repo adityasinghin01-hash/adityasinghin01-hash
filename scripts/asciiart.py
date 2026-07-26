@@ -9,10 +9,13 @@ for light text glowing on a dark terminal. The ink-on-paper polarity renders a
 hollow face and is only kept here for reference.
 """
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
-RAMP = " .`:-=+*cs#%@"          # blank -> dense
-CELL_RATIO = 0.55               # monospace advance / line height
+# Ordered by measured ink coverage of each glyph in Menlo (see build_ramp.py),
+# not by eye. The old hand-picked ramp had steps sitting nearly on top of each
+# other in real coverage, which wasted tonal range and flattened the face.
+RAMP = " _`.,:~;+=vt1IV5$UHRWB0N"
+CELL_RATIO = 8.4 / 14.7         # advance / line height, matches the SVG grid
 
 
 def subject_mask(gray, thresh=228):
@@ -71,7 +74,7 @@ def autocrop(img, mask, pad=24):
                      min(xs.max() + pad, w), min(ys.max() + pad, h)))
 
 
-def asciify(img, cols=78, gamma=0.9, trim_bottom=0.80):
+def asciify(img, cols=150, gamma=0.9, sharp=1.7, trim_bottom=0.80):
     """Returns a list of equal-length strings."""
     if trim_bottom < 1.0:                            # drop generator watermark
         w, h = img.size
@@ -92,10 +95,24 @@ def asciify(img, cols=78, gamma=0.9, trim_bottom=0.80):
 
     h, w = gray.shape
     rows = max(int(cols * (h / w) * CELL_RATIO), 1)
-    small = np.asarray(Image.fromarray((norm * 255).astype(np.uint8))
-                       .resize((cols, rows), Image.LANCZOS)) / 255.0
+
+    src = Image.fromarray((norm * 255).astype(np.uint8))
+    # Sharpen before the reduction: whatever survives to a 150-wide grid has to
+    # be exaggerated first, or area-averaging swallows the eyes and mouth.
+    if sharp:
+        src = src.filter(ImageFilter.UnsharpMask(radius=max(w // cols, 2),
+                                                 percent=int(sharp * 100),
+                                                 threshold=2))
+    small = np.asarray(src.resize((cols, rows), Image.LANCZOS)) / 255.0
     cov = np.asarray(Image.fromarray((mask * 255).astype(np.uint8))
                      .resize((cols, rows), Image.LANCZOS)) / 255.0
+
+    # Re-stretch after resampling — the reduction compresses contrast, and the
+    # ramp needs the full range to use all 24 steps.
+    inside = small[cov >= 0.5]
+    if inside.size:
+        a, b = np.percentile(inside, 2), np.percentile(inside, 98)
+        small = np.clip((small - a) / max(b - a, 1e-3), 0, 1)
 
     idx = np.clip((small * (len(RAMP) - 1)).round().astype(int), 0, len(RAMP) - 1)
     idx[cov < 0.30] = 0                              # outside the silhouette
