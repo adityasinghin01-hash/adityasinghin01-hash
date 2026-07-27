@@ -103,8 +103,12 @@ def build(data, theme):
     o.append('</g>')
 
     # cells — the curtain
+    # One pair of animations per column, not per cell. The curtain's unit is
+    # the column anyway, and animating all 371 cells individually meant 742
+    # concurrent SMIL timelines for the browser to evaluate every frame.
     for wk in range(weeks):
         begin = wk * col_t
+        cells = []
         for dow in range(7):
             d = start + timedelta(days=wk * 7 + dow)
             key = d.isoformat()
@@ -113,17 +117,19 @@ def build(data, theme):
             x = gx + wk * COL
             y = gy + dow * COL
             lv = level(days[key], peak)
-            o.append(
-                f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" rx="{R}" '
-                f'fill="{t["levels"][lv]}" opacity="0">'
-                f'<title>{days[key]} on {key}</title>'
-                f'<animate attributeName="opacity" from="0" to="1" '
-                f'begin="{begin:.3f}s" dur=".34s" fill="freeze"/>'
-                # drops in from above, so squares unfurl rather than blink on
-                f'<animateTransform attributeName="transform" type="translate" '
-                f'values="0 -14;0 0" begin="{begin:.3f}s" dur=".5s" fill="freeze" '
-                f'calcMode="spline" keyTimes="0;1" keySplines=".16 .9 .3 1"/>'
-                '</rect>')
+            cells.append(f'<rect x="{x}" y="{y}" width="{CELL}" height="{CELL}" '
+                         f'rx="{R}" fill="{t["levels"][lv]}">'
+                         f'<title>{days[key]} on {key}</title></rect>')
+        if not cells:
+            continue
+        o.append(f'<g opacity="0">'
+                 f'<animate attributeName="opacity" from="0" to="1" '
+                 f'begin="{begin:.3f}s" dur=".34s" fill="freeze"/>'
+                 # drops in from above, so the column unfurls rather than blinks on
+                 f'<animateTransform attributeName="transform" type="translate" '
+                 f'values="0 -14;0 0" begin="{begin:.3f}s" dur=".5s" fill="freeze" '
+                 f'calcMode="spline" keyTimes="0;1" keySplines=".16 .9 .3 1"/>'
+                 + "".join(cells) + '</g>')
 
     # gust locked to the reveal front
     o.append(f'<rect y="{gy - 20}" width="90" height="{grid_h + 40}" '

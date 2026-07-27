@@ -86,14 +86,24 @@ def build(lines, theme):
              f'<animateTransform attributeName="gradientTransform" type="translate" '
              f'values="0 0;{W*0.3:.0f} 0;0 0" dur="16s" repeatCount="indefinite"/>'
              '</linearGradient>')
-    # one clip per row — the print head
-    for i in range(rows):
-        y = art_y + i * lh
-        o.append(f'<clipPath id="r{i}"><rect x="{art_x:.1f}" y="{y - lh:.1f}" '
-                 f'height="{lh * 1.6:.1f}" width="0">'
-                 f'<animate attributeName="width" from="0" to="{art_inner:.1f}" '
-                 f'begin="{i * row_t:.3f}s" dur="{row_t:.3f}s" fill="freeze"/>'
-                 '</rect></clipPath>')
+    # Two clips, not one per row. Only two facts matter at any instant: which
+    # rows are done, and how far the head is across the current one. Emitting a
+    # clipPath per row meant 143 concurrent SMIL timelines for the browser to
+    # evaluate every frame, which is what made it stutter.
+    done_h = ";".join(f"{i * lh:.2f}" for i in range(rows + 1))
+    live_y = ";".join(f"{art_y + i * lh - fs * 0.85:.2f}" for i in range(rows))
+    o.append(f'<clipPath id="done"><rect x="{art_x:.1f}" '
+             f'y="{art_y - fs * 0.85:.2f}" width="{art_inner:.1f}" height="0">'
+             f'<animate attributeName="height" values="{done_h}" '
+             f'calcMode="discrete" dur="{SWEEP:.2f}s" fill="freeze"/>'
+             '</rect></clipPath>')
+    o.append(f'<clipPath id="live"><rect x="{art_x:.1f}" '
+             f'y="{art_y - fs * 0.85:.2f}" width="0" height="{lh * 1.15:.2f}">'
+             f'<animate attributeName="width" from="0" to="{art_inner:.1f}" '
+             f'dur="{row_t:.4f}s" repeatCount="{rows}"/>'
+             f'<animate attributeName="y" values="{live_y}" calcMode="discrete" '
+             f'dur="{SWEEP:.2f}s" fill="freeze"/>'
+             '</rect></clipPath>')
     o.append('</defs>')
 
     # ---------- shell ------------------------------------------------
@@ -130,18 +140,23 @@ def build(lines, theme):
         o.append(f'<path d="M{x} {y + 18*dy} L{x} {y} L{x + 18*dx} {y}" fill="none" '
                  f'stroke="{t["cyan"]}" stroke-opacity=".5" stroke-width="1.5"/>')
 
-    o.append(f'<g font-family="{MONO}" font-size="{fs:.3f}">')
+    # One copy of the glyphs in <defs>, instanced twice with different clips.
+    # SMIL does not drive <use> instances of a defs subtree, but the animation
+    # lives on the clip rects out here, so instancing is safe.
+    art = [f'<g id="art" font-family="{MONO}" font-size="{fs:.3f}">']
     for i, ln in enumerate(lines):
         col = ramp_color(t["ramp"], i / max(rows - 1, 1))
         y = art_y + i * lh
         # xml:space has to sit on the <text> itself — Chrome ignores it when
         # only inherited, the padding spaces collapse, and textLength then
         # smears the surviving glyphs across the whole row.
-        o.append(f'<text xml:space="preserve" clip-path="url(#r{i})" '
-                 f'x="{art_x:.1f}" y="{y:.2f}" '
-                 f'fill="{col}" textLength="{art_inner:.1f}" '
-                 f'lengthAdjust="spacing">{esc(ln)}</text>')
-    o.append('</g>')
+        art.append(f'<text xml:space="preserve" x="{art_x:.1f}" y="{y:.2f}" '
+                   f'fill="{col}" textLength="{art_inner:.1f}" '
+                   f'lengthAdjust="spacing">{esc(ln)}</text>')
+    art.append('</g>')
+    o.append('<defs>' + "".join(art) + '</defs>')
+    o.append('<use href="#art" xlink:href="#art" clip-path="url(#done)"/>')
+    o.append('<use href="#art" xlink:href="#art" clip-path="url(#live)"/>')
 
     # print cursor: x sweeps each row, y steps down one row at a time
     cw = fs * ADVANCE
@@ -234,7 +249,8 @@ def build(lines, theme):
              f'{esc(FOOTER)}</text>')
     o.append('</g>')
 
-    head = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H:.0f}" '
+    head = (f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {W} {H:.0f}" '
             f'width="{W}" height="{H:.0f}" role="img" '
             f'aria-label="Profile card for {esc(USERNAME)}">')
     return head + "".join(o) + "</svg>"
