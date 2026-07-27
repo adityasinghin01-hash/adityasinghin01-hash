@@ -1,27 +1,39 @@
 """Single source of truth for everything the generated art says."""
 
 USERNAME = "adityasinghin01-hash"
+HANDLE = "aditya"
 NAME = "Aditya Singh"
 
-INFO = [
-    ("Now",   "Student — building and shipping apps"),
-    ("Focus", "Learning by building, mostly AI-driven"),
-    ("Loc",   "Meerut, Uttar Pradesh, India"),
-    ("Lang",  "TypeScript, Python, JavaScript"),
-    ("Stack", "React, Vite, Node, Express, Tailwind"),
-    ("Also",  "GSAP, Three.js, deck.gl, MapLibre, Flutter"),
-    ("Cert",  "AWS Certified AI Practitioner"),
+# Rendered as label ······· value. Keep values under ~34 characters; the info
+# column is fixed width and longer strings collide with the leader dots.
+IDENTITY = [
+    ("Subject", NAME),
+    ("Role",    "Student — building & shipping"),
+    ("Base",    "Meerut, Uttar Pradesh, IN"),
+    ("Status",  "Learning / Building / Shipping"),
 ]
 
-# Keep each under ~56 chars — the info card is a fixed-width column and
-# anything longer runs off the right edge.
-HIGHLIGHTS = [
-    "NETRA — crime analytics for Karnataka State Police",
-    "ShiftWise — conflict-free team rosters, generated",
-    "Transformers running in-browser, no server needed",
+SECTIONS = [
+    ("STACK.NODE", [
+        ("Lang",  "TypeScript, Python, JS"),
+        ("Front", "React, Vite, Tailwind, GSAP"),
+        ("Back",  "Node, Express, Firebase"),
+        ("Also",  "Three.js, deck.gl, Flutter"),
+    ]),
+    ("BUILD.LOG", [
+        ("NETRA",     "Crime analytics — KSP"),
+        ("ShiftWise", "Conflict-free rosters"),
+        ("Cert",      "AWS AI Practitioner"),
+    ]),
+    ("GRID.LINKS", [
+        ("GitHub", "@" + USERNAME),
+        ("X",      "@aditya_s0z"),
+    ]),
 ]
 
-TAGLINE = "a learner who loves to learn and build"
+LOCK = "AI / DATA / WEB"
+CHIPS = ["⌂ GITHUB", USERNAME.upper(), "X", "LINKEDIN"]
+FOOTER = "AI SYSTEMS / DATA PIPELINES / SHIPPED SOFTWARE"
 
 SOCIALS = [
     ("GitHub",   f"https://github.com/{USERNAME}"),
