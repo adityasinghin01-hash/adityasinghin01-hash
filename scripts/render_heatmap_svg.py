@@ -1,8 +1,13 @@
-"""Contribution calendar as an animated SVG.
+"""Contribution calendar as an SVG.
 
-Columns are revealed left to right like a curtain, driven by wind: a soft gust
-rides the reveal front, and ambient streaks keep blowing across afterwards so
-the card does not freeze dead once the graph lands.
+The whole year is drawn immediately. A soft gust then crosses it once, and
+ambient streaks keep blowing afterwards so the card does not sit dead.
+
+Nothing may hide a column. Browsers discard an offscreen image and rebuild it
+from scratch on scroll-back, restarting every timeline in the file, and an
+<img>-hosted SVG cannot tell that rebuild apart from a genuine page load. A
+reveal-from-blank therefore replays its empty state every time you scroll past.
+Drawing first and animating over the top makes the rebuild invisible.
 
 Stdlib only — this is the one generator the scheduled workflow runs, and the
 runner installs nothing.
@@ -20,7 +25,7 @@ PAD, PANE_PAD, BAR = 30, 24, 74
 CELL, GAP, R = 26, 6, 6
 COL = CELL + GAP
 HEAD_FS, FOOT_FS = 13.0, 15.0
-SWEEP = 3.4                     # seconds for the curtain to cross the year
+SWEEP = 1.1                     # seconds for the gust to cross the year
 
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -122,14 +127,7 @@ def build(data, theme):
                          f'<title>{days[key]} on {key}</title></rect>')
         if not cells:
             continue
-        o.append(f'<g opacity="0">'
-                 f'<animate attributeName="opacity" from="0" to="1" '
-                 f'begin="{begin:.3f}s" dur=".34s" fill="freeze"/>'
-                 # drops in from above, so the column unfurls rather than blinks on
-                 f'<animateTransform attributeName="transform" type="translate" '
-                 f'values="0 -14;0 0" begin="{begin:.3f}s" dur=".5s" fill="freeze" '
-                 f'calcMode="spline" keyTimes="0;1" keySplines=".16 .9 .3 1"/>'
-                 + "".join(cells) + '</g>')
+        o.append('<g>' + "".join(cells) + '</g>')
 
     # gust locked to the reveal front
     o.append(f'<rect y="{gy - 20}" width="90" height="{grid_h + 40}" '
@@ -156,9 +154,7 @@ def build(data, theme):
              f'on {data["best_day"]["date"]}')
     fy = gy + grid_h + 34
     o.append(f'<text x="{gx}" y="{fy}" font-family="{MONO}" font-size="{FOOT_FS}" '
-             f'fill="{t["ink"]}" opacity="0">{stats}'
-             f'<animate attributeName="opacity" from="0" to="1" '
-             f'begin="{SWEEP*0.75:.2f}s" dur=".6s" fill="freeze"/></text>')
+             f'fill="{t["ink"]}">{stats}</text>')
 
     lx = W - PAD - PANE_PAD - (5 * COL + 90)
     o.append(f'<g font-family="{MONO}" font-size="{HEAD_FS}" fill="{t["dim"]}">')

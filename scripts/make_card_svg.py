@@ -1,13 +1,18 @@
-"""The main profile card: ASCII portrait typed out beside a system-info panel,
-both inside one glowing container.
+"""The main profile card: ASCII portrait beside a system-info panel, both inside
+one glowing container.
 
 Everything is SMIL. GitHub serves README images through its camo proxy inside
-an <img>, so there is no JavaScript and no pointer interaction — the typing,
-the cursor and the panel reveal all have to live in the file.
+an <img>, so there is no JavaScript and no pointer interaction — whatever motion
+the card has must live in the file.
 
-The portrait is typed row by row: each row carries a <clipPath> whose rect
-widens left to right, so glyphs appear under a travelling print head rather
-than the whole line switching on at once.
+Nothing here is allowed to hide content. Every glyph and info row is painted at
+full opacity in the first frame, and the animation is a highlight travelling
+across art that is already drawn. That constraint is deliberate: a browser
+discards an offscreen image and rebuilds it from scratch when you scroll back,
+which restarts every timeline in the file. A reveal-from-blank therefore replays
+its empty state on every scroll, with no way to detect that it has already run —
+an <img>-hosted SVG has no scroll, no page lifecycle and no persistent state.
+Painting first and animating second makes that rebuild invisible.
 """
 import sys
 from pathlib import Path
@@ -31,7 +36,8 @@ ART_W = W - PAD * 2 - INFO_W - GAP
 
 INFO_FS = 17.0
 HEAD_FS = 13.0
-SWEEP = 8.2                   # seconds to type the whole portrait
+SWEEP = 1.1                   # seconds for the highlight to cross the portrait
+BAND = 96                     # highlight height in viewBox units
 
 
 def esc(t):
@@ -73,7 +79,6 @@ def build(lines, theme):
     chips_y = BAR + pane_h + GAP + 34
     H = chips_y + 54
 
-    row_t = SWEEP / rows
     o = []
 
     # ---------- defs -------------------------------------------------
@@ -86,23 +91,15 @@ def build(lines, theme):
              f'<animateTransform attributeName="gradientTransform" type="translate" '
              f'values="0 0;{W*0.3:.0f} 0;0 0" dur="16s" repeatCount="indefinite"/>'
              '</linearGradient>')
-    # One clipPath holding two rects — a clip path is the union of its shapes,
-    # so the finished block and the row under the head can share a single clip
-    # and the glyphs only have to exist once.
-    done_h = ";".join(f"{i * lh:.2f}" for i in range(rows + 1))
-    live_y = ";".join(f"{art_y + i * lh - fs * 0.85:.2f}" for i in range(rows))
-    o.append(f'<clipPath id="type">'
-             f'<rect x="{art_x:.1f}" y="{art_y - fs * 0.85:.2f}" '
-             f'width="{art_inner:.1f}" height="0">'
-             f'<animate attributeName="height" values="{done_h}" '
-             f'calcMode="discrete" dur="{SWEEP:.2f}s" fill="freeze"/></rect>'
-             f'<rect x="{art_x:.1f}" y="{art_y - fs * 0.85:.2f}" width="0" '
-             f'height="{lh * 1.15:.2f}">'
-             f'<animate attributeName="width" from="0" to="{art_inner:.1f}" '
-             f'dur="{row_t:.4f}s" repeatCount="{rows}"/>'
-             f'<animate attributeName="y" values="{live_y}" calcMode="discrete" '
-             f'dur="{SWEEP:.2f}s" fill="freeze"/></rect>'
-             '</clipPath>')
+    # Soft-edged band for the highlight. Vertical, so it reads as a horizontal
+    # bar of light travelling down the portrait.
+    o.append(f'<linearGradient id="scan" x1="0" y1="0" x2="0" y2="1">'
+             f'<stop offset="0" stop-color="{t["wind"]}" stop-opacity="0"/>'
+             f'<stop offset=".42" stop-color="{t["wind"]}" stop-opacity=".14"/>'
+             f'<stop offset=".5" stop-color="{t["wind"]}" stop-opacity=".30"/>'
+             f'<stop offset=".58" stop-color="{t["wind"]}" stop-opacity=".14"/>'
+             f'<stop offset="1" stop-color="{t["wind"]}" stop-opacity="0"/>'
+             '</linearGradient>')
     o.append('</defs>')
 
     # ---------- shell ------------------------------------------------
@@ -145,8 +142,7 @@ def build(lines, theme):
     # every frame the clip changes. Rows share one font and size, so they stay
     # aligned with each other without it.
     adv = fs * ADVANCE
-    o.append(f'<g clip-path="url(#type)" font-family="{MONO}" '
-             f'font-size="{fs:.3f}">')
+    o.append(f'<g font-family="{MONO}" font-size="{fs:.3f}">')
     for i, ln in enumerate(lines):
         body = ln.rstrip()
         lead = len(body) - len(body.lstrip())
@@ -159,17 +155,17 @@ def build(lines, theme):
                  f'y="{art_y + i * lh:.2f}" fill="{col}">{esc(body)}</text>')
     o.append('</g>')
 
-    # print cursor: x sweeps each row, y steps down one row at a time
-    cw = fs * ADVANCE
-    ys = ";".join(f"{art_y + i * lh - fs * 0.82:.2f}" for i in range(rows))
-    o.append(f'<rect width="{cw:.2f}" height="{fs:.2f}" fill="{t["cyan"]}" '
-             f'x="{art_x:.1f}" y="{art_y - fs * 0.82:.2f}">'
-             f'<animate attributeName="x" from="{art_x:.1f}" '
-             f'to="{art_x + art_inner:.1f}" dur="{row_t:.3f}s" repeatCount="{rows}"/>'
-             f'<animate attributeName="y" values="{ys}" calcMode="discrete" '
+    # One pass of light down the finished portrait. It ends frozen at zero
+    # opacity, so the settled card is exactly the static artwork — a rebuild
+    # redraws that artwork immediately and simply replays this pass over it.
+    top = art_y - BAND
+    bot = art_y + art_h + BAND
+    o.append(f'<rect x="{art_x:.1f}" y="{top:.1f}" width="{art_inner:.1f}" '
+             f'height="{BAND}" fill="url(#scan)" opacity="0">'
+             f'<animate attributeName="y" from="{top:.1f}" to="{bot:.1f}" '
              f'dur="{SWEEP:.2f}s" fill="freeze"/>'
-             f'<animate attributeName="opacity" values="1;1;0" keyTimes="0;.995;1" '
-             f'dur="{SWEEP:.2f}s" fill="freeze"/>'
+             f'<animate attributeName="opacity" values="0;1;1;0" '
+             f'keyTimes="0;0.07;0.86;1" dur="{SWEEP:.2f}s" fill="freeze"/>'
              '</rect>')
 
     o.append(f'<text x="{art_x}" y="{BAR + pane_h - 14}" font-family="{MONO}" '
@@ -194,11 +190,11 @@ def build(lines, theme):
 
     def reveal(markup):
         nonlocal n
-        # Staggered to land alongside the typing rather than after it.
-        b = 0.25 + n * (SWEEP * 0.78) / 26
+        # Kept as a wrapper so the call sites below stay untouched, but the rows
+        # no longer fade in. They used to stagger over ~6.6s, which meant a
+        # scroll-back rebuilt the whole info panel line by line in front of you.
         n += 1
-        return (f'<g opacity="0"><animate attributeName="opacity" from="0" to="1" '
-                f'begin="{b:.2f}s" dur=".45s" fill="freeze"/>{markup}</g>')
+        return f'<g>{markup}</g>'
 
     body.append(reveal(
         f'<text x="{tx}" y="{y:.0f}" fill="{t["violet"]}" font-weight="600">'
