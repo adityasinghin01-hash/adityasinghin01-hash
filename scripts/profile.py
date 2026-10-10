@@ -8,22 +8,22 @@ NAME = "Aditya Singh"
 # column is fixed width and longer strings collide with the leader dots.
 IDENTITY = [
     ("Subject", NAME),
-    ("Role",    "Student — building & shipping"),
+    ("Role",    "Backend developer · student"),
     ("Base",    "Meerut, Uttar Pradesh, IN"),
-    ("Status",  "Learning / Building / Shipping"),
+    ("Status",  "Open to internships"),
 ]
 
 SECTIONS = [
     ("STACK.NODE", [
-        ("Lang",  "TypeScript, Python, JS"),
-        ("Front", "React, Vite, Tailwind, GSAP"),
-        ("Back",  "Node, Express, Firebase"),
-        ("Also",  "Three.js, deck.gl, Flutter"),
+        ("Lang",  "Python, JavaScript, Java"),
+        ("Back",  "Node, Express, REST, MongoDB"),
+        ("Front", "React, Vite, Tailwind"),
+        ("AI",    "Claude Code, Codex CLI"),
     ]),
     ("BUILD.LOG", [
-        ("NETRA",     "Crime analytics — KSP"),
-        ("ShiftWise", "Conflict-free rosters"),
-        ("Cert",      "AWS AI Practitioner"),
+        ("FuelPrint", "1st of 30 · IDEAVERSE"),
+        ("tote",      "AI memory, any computer"),
+        ("ShiftWise", "Scheduling backend"),
     ]),
     ("GRID.LINKS", [
         ("GitHub", "@" + USERNAME),
@@ -31,9 +31,9 @@ SECTIONS = [
     ]),
 ]
 
-LOCK = "AI / DATA / WEB"
+LOCK = "BACKEND / AI / WEB"
 CHIPS = ["⌂ GITHUB", USERNAME.upper(), "X", "LINKEDIN"]
-FOOTER = "AI SYSTEMS / DATA PIPELINES / SHIPPED SOFTWARE"
+FOOTER = "BACKEND / AI-ASSISTED / SHIPPED SOFTWARE"
 
 SOCIALS = [
     ("GitHub",   f"https://github.com/{USERNAME}"),
